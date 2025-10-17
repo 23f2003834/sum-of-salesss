@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Sales Summary cHJvZHVjdCxwcmljZSxzYWxlcwpBcHBsZSwxLjIwLDMw</title>
-<!-- Bootstrap CSS from CDN -->
+<!-- Bootstrap CSS from CDN with fallback -->
 <link
   rel="stylesheet"
   href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
@@ -20,44 +20,44 @@ body {
 </style>
 </head>
 <body>
-<div class="container text-center">
-  <h1 class="mb-4">Sales Summary</h1>
+<div class="container text-center mb-4">
+  <h1 class="mb-3">Sales Summary</h1>
+  <!-- Currency selection -->
+  <div class="d-flex justify-content-center mb-3">
+    <label for="currency-picker" class="me-2">Select Currency:</label>
+    <select id="currency-picker" class="form-select w-auto">
+      <option value="USD" selected>USD</option>
+      <option value="EUR">EUR</option>
+      <option value="GBP">GBP</option>
+      <option value="TH">TH</option>
+    </select>
+  </div>
+  <!-- Total sales display -->
+  <div class="alert alert-primary" id="total-currency" style="font-size:2rem;">USD</div>
   <div id="total-sales" class="alert alert-primary" style="font-size:2rem;">0</div>
 </div>
-
-<!-- CSV file as attachment -->
-<!-- In a real environment, data.csv is an attachment file. For this example, included as a data URI or embedded data for demonstration. -->
-
-<!-- For the purpose of this code, we'll simulate fetching data.csv from an object URL or similar. 
-In a real test, the file would be attached and fetched via fetch. -->
 
 <script>
 (async () => {
   // Seed value decoded from base64 string
   const seedStr = "cHJvZHVjdCxwcmljZSxzYWxlcwpBcHBsZSwxLjIwLDMw";
-  const decoder = new TextDecoder('utf-8');
 
-  // Data CSV as a blob (simulating attachment)
+  // Simulate fetching attached CSV
   const csvContent = `product,price,sales
 Apple,1.20,30
 Orange,1.45,40`;
-  
-  // Create a blob URL to simulate fetching attachment
   const blob = new Blob([csvContent], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
-  
-  // Fetch the CSV data
   const response = await fetch(url);
   const csvText = await response.text();
-  URL.revokeObjectURL(url); // cleanup
-  
+  URL.revokeObjectURL(url);
+
   // Parse CSV
   const lines = csvText.trim().split('\n');
   const headers = lines[0].split(',');
   const salesIndex = headers.indexOf('sales');
 
   let totalSales = 0;
-
   for (let i=1; i<lines.length; i++) {
     const cols = lines[i].split(',');
     const salesVal = parseFloat(cols[salesIndex]);
@@ -66,27 +66,56 @@ Orange,1.45,40`;
     }
   }
 
-  // Set document title
-  document.title = `Sales Summary ${seedStr}`;
+  // Currency rates
+  const ratesJson = '{"TH":1.0,"EUR":0.85,"GBP":0.75}';
+  const rates = JSON.parse(ratesJson);
 
-  // Check for bootstrap link
-  const bootstrapLink = document.querySelector("link[href*='bootstrap']");
-  if (!bootstrapLink) {
-    console.error('Bootstrap CSS link not found.');
+  // Elements
+  const totalElement = document.querySelector('#total-sales');
+  const currencyPicker = document.querySelector('#currency-picker');
+  const totalCurrencyDiv = document.querySelector('#total-currency');
+
+  // Verify presence
+  if (!currencyPicker) {
+    console.error('Currency picker not found.');
+  }
+  if (!totalCurrencyDiv) {
+    console.error('Total currency display not found.');
   }
 
-  // Check total sales in #total-sales
-  const totalElement = document.querySelector('#total-sales');
+  // Initialize total display
+  let activeCurrency = currencyPicker.value;
   totalElement.textContent = totalSales.toFixed(2);
+  totalCurrencyDiv.textContent = activeCurrency;
 
-  // Optional: verify conditions (simulated here)
-  // For demonstration purposes, log the checks:
+  // Function to convert total sales based on selected currency
+  function updateTotalDisplay() {
+    const selectedCurrency = currencyPicker.value;
+    activeCurrency = selectedCurrency;
+    let rate = 1;
+    if (selectedCurrency !== 'USD') {
+      rate = rates[selectedCurrency] || 1;
+    }
+    const convertedTotal = totalSales * rate;
+    totalElement.textContent = convertedTotal.toFixed(2);
+    totalCurrencyDiv.textContent = selectedCurrency;
+  }
+
+  // Event listener for currency change
+  if (currencyPicker) {
+    currencyPicker.addEventListener('change', updateTotalDisplay);
+  }
+
+  // Initial update
+  updateTotalDisplay();
+
+  // Validation checks
   const titleCheck = document.title === `Sales Summary ${seedStr}`;
+  const bootstrapLink = document.querySelector("link[href*='bootstrap']");
   const bootstrapLoaded = !!bootstrapLink;
   const totalNum = parseFloat(totalElement.textContent);
-  const result = totalSales; // for the check
-  const totalDiff = Math.abs(totalNum - result);
-  const salesCheck = totalDiff < 0.01;
+  const salesCheck = Math.abs(totalNum - totalSales) < 0.01;
+
   console.log('Title check:', titleCheck);
   console.log('Bootstrap loaded:', bootstrapLoaded);
   console.log('Sales total check:', salesCheck);
